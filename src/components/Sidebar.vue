@@ -2,7 +2,7 @@
   <div class="sidebar">
     <div class="workspace">
       <div class="workspace-name">{{ workspaceName }}</div>
-      <button class="add-channel">+</button>
+      <button class="add-channel" @click="addChannel">+</button>
     </div>
 
     <div class="channels">
@@ -16,8 +16,9 @@
 
     <div class="direct-messages">
       <h2>Direct Messages</h2>
+      <!-- Example of Direct Messages; this could be implemented similarly to channels if needed -->
       <ul>
-        <li v-for="user in users" :key="user.id">
+        <li v-for="user in directMessages" :key="user.id">
           <img :src="user.avatar" class="avatar" alt="Avatar" /> {{ user.name }}
         </li>
       </ul>
@@ -27,18 +28,28 @@
 
 <script>
 export default {
-  data() {
-    return {
-      workspaceName: 'My Workspace',
-      channels: [
-        { id: 1, name: 'general' },
-        { id: 2, name: 'random' },
-      ],
-      users: [
-        { id: 1, name: 'Alice', avatar: 'https://via.placeholder.com/24' },
-        { id: 2, name: 'Bob', avatar: 'https://via.placeholder.com/24' },
-      ],
-    };
+  computed: {
+    workspaceName() {
+      return this.$store.getters.getWorkspace.name || 'No Workspace';
+    },
+    channels() {
+      return this.$store.getters.getChannels;
+    },
+    directMessages() {
+      // Placeholder for direct messages, if needed.
+      // This could be another state managed by Vuex.
+      return [];
+    },
+  },
+  methods: {
+    addChannel() {
+      // Trigger an action to add a new channel
+      const newChannel = {
+        id: Date.now().toString(), // Unique ID for the new channel
+        name: `Channel ${this.channels.length + 1}`,
+      };
+      this.$store.dispatch('addChannel', newChannel);
+    },
   },
 };
 </script>
@@ -55,6 +66,7 @@ export default {
   padding: 10px;
   font-size: 14px;
 }
+
 /* Workspace section */
 .workspace {
   display: flex;
@@ -62,6 +74,7 @@ export default {
   justify-content: space-between;
   margin-bottom: 20px;
 }
+
 .workspace-name {
   font-weight: bold;
   font-size: 16px;
@@ -69,6 +82,7 @@ export default {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .add-channel {
   background: none;
   border: none;
@@ -78,32 +92,39 @@ export default {
   padding: 0;
   margin: 0;
 }
+
 .add-channel:hover {
   color: #fff;
 }
+
 /* Channels section */
 .channels {
   margin-bottom: 20px;
 }
+
 .channels h2 {
   font-size: 12px;
   text-transform: uppercase;
   margin-bottom: 10px;
   color: #b9bbbe;
 }
+
 .channels ul {
   list-style-type: none;
   padding: 0;
   margin: 0;
 }
+
 .channels li {
   padding: 5px 10px;
   cursor: pointer;
   border-radius: 4px;
 }
+
 .channels li:hover {
   background-color: #3a3e44;
 }
+
 /* Direct Messages section */
 .direct-messages h2 {
   font-size: 12px;
@@ -111,11 +132,13 @@ export default {
   margin-bottom: 10px;
   color: #b9bbbe;
 }
+
 .direct-messages ul {
   list-style-type: none;
   padding: 0;
   margin: 0;
 }
+
 .direct-messages li {
   display: flex;
   align-items: center;
@@ -123,9 +146,11 @@ export default {
   cursor: pointer;
   border-radius: 4px;
 }
+
 .direct-messages li:hover {
   background-color: #3a3e44;
 }
+
 .avatar {
   width: 24px;
   height: 24px;
