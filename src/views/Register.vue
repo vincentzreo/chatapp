@@ -42,15 +42,20 @@ export default {
     };
   },
   methods: {
-    register() {
-      const userData = {
-        fullName: this.fullName,
-        email: this.email,
-        workspaceName: this.workspaceName,
-        password: this.password,
-      };
-      console.log('User Data:', userData);
-      this.$router.push('/chat');
+    async register() {
+      try {
+        const user = await this.$store.dispatch('signup', {
+          fullname: this.fullName,
+          email: this.email,
+          workspace: this.workspaceName,
+          password: this.password,
+        });
+
+        console.log("Signup successful, user: ", user);
+        this.$router.push('/');
+      } catch (error) {
+        console.error("Error signing up: ", error);
+      }
     },
   },
 };

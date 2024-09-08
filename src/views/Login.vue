@@ -31,14 +31,19 @@ export default {
     };
   },
   methods: {
-    login() {
-      const loginData = {
-        email: this.email,
-        password: this.password,
-      };
-      console.log('Login Data:', loginData);
-      this.$router.push('/chat');
-    },
+    async login() {
+      try {
+        const loginData = {
+          email: this.email,
+          password: this.password,
+        };
+        const user = await this.$store.dispatch('signin', loginData);
+        console.log('Login Data:', user);
+        this.$router.push('/');
+      } catch (error) {
+        console.error('Error logging in:', error);
+      }
+    } 
   },
 };
 </script>
