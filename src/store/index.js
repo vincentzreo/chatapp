@@ -12,6 +12,7 @@ export default createStore({
     channels: [],       // List of channels
     messages: {},       // Messages hashmap, keyed by channel ID
     users: {},          // Users hashmap under workspace, keyed by user ID
+    activeChannel: null, // Active channel
   },
   mutations: {
     setUser(state, user) {
@@ -29,6 +30,9 @@ export default createStore({
     setMessages(state, messages) {
       state.messages = messages;
     },
+    setMessageForChannel(state, { channelId, messages }) {
+      state.messages[channelId] = messages;
+    },
     setUsers(state, users) {
       state.users = users;
     },
@@ -42,6 +46,10 @@ export default createStore({
       } else {
         state.messages[channelId] = [message];
       }
+    },
+    setActiveChannel(state, channelId) {
+      const channel = state.channels.find((c) => c.id === channelId);
+      state.activeChannel = channel;
     },
     loadUserState(state) {
       const storedUser = localStorage.getItem('user');
@@ -103,6 +111,26 @@ export default createStore({
         throw error;
       }
     },
+    async fetchMessagesForChannel({ state, commit }, channelId) {
+      if (!state.messages[channelId] || state.messages[channelId].length === 0) {
+        try {
+          const response = await axios.get(`${getUrlBase()}/chats/${channelId}/messages`, {
+            headers: {
+              Authorization: `Bearer ${state.token}`,
+            },
+          });
+          let messages = response.data;
+          messages = messages.map((message) => {
+            const user = state.users[message.senderId];
+            return { ...message, sender: user, };
+          });
+          commit('setMessageForChannel', { channelId, messages });
+        } catch (error) {
+          console.error('Failed to fetch messages:', error);
+          throw error;
+        }
+      }
+    },
     logout({ commit }) {
       // Clear local storage and state
       localStorage.removeItem('user');
@@ -116,6 +144,9 @@ export default createStore({
       commit('setWorkspace', '');
       commit('setChannels', []);
       commit('setMessages', {});
+    },
+    setActiveChannel({ commit }, channel) {
+      commit('setActiveChannel', channel);
     },
     addChannel({ commit }, channel) {
       commit('addChannel', channel);
@@ -161,6 +192,13 @@ export default createStore({
     },
     getChannelMessages: (state) => (channelId) => {
       return state.messages[channelId] || [];
+    },
+    getMessagesForActiveChannel(state) {
+      if (!state.activeChannel) {
+        return [];
+      }
+      let messages = state.messages[state.activeChannel.id];
+      return state.messages[state.activeChannel.id] || [];
     },
   },
 });
