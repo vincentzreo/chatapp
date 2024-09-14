@@ -33,12 +33,36 @@ export default {
       message: '',
     };
   },
+  computed: {
+    userId() {
+      return this.$store.state.user.id;
+    },
+    workspaceId() {
+      return this.$store.state.workspace.id;
+    },
+    activeChannelId() {
+      let channel = this.$store.state.activeChannel;
+      if (!channel) {
+        return null;
+      }
+      return channel.id;
+    },
+  },
   methods: {
     sendMessage() {
-      if (this.message.trim()) {
-        // Dispatch the message to Vuex store or perform the send operation
-        this.$store.dispatch('sendMessage', this.message);
+      if (this.message.trim() === '') {
+        return;
+      }
+
+      const payload = {
+        chatId: this.activeChannelId,
+        content: this.message,
+      };
+      try {
+        this.$store.dispatch('sendMessage', payload);
         this.message = '';
+      } catch (error) {
+        console.error('Error sending message:', error);
       }
     },
   },
