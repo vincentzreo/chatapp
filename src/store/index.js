@@ -2,6 +2,7 @@ import { createStore } from 'vuex';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { getUrlBase } from '../util';
+import { initSSE } from '../util';
 
 
 export default createStore({
@@ -13,8 +14,12 @@ export default createStore({
     messages: {},       // Messages hashmap, keyed by channel ID
     users: {},          // Users hashmap under workspace, keyed by user ID
     activeChannel: null, // Active channel
+    sse: null,          // Server-Sent Events (SSE) connection
   },
   mutations: {
+    setSSE(state, sse) {
+      state.sse = sse;
+    },
     setUser(state, user) {
       state.user = user;
     },
@@ -42,7 +47,7 @@ export default createStore({
     },
     addMessage(state, { channelId, message }) {
       if (state.messages[channelId]) {
-        state.messages[channelId].push(message);
+        state.messages[channelId].unshift(message);
       } else {
         state.messages[channelId] = [message];
       }
@@ -80,7 +85,20 @@ export default createStore({
     },
   },
   actions: {
-        async signup({ commit }, { email, fullname, password, workspace }) {
+    initSSE({ state, commit }) {
+      if (state.sse) {
+        state.sse.close();
+      }
+      const sse = initSSE(this);
+      commit('setSSE', sse);
+    },
+    closeSSE({ state, commit }) {
+      if (state.sse) {
+        state.sse.close();
+        commit('setSSE', null);
+      }
+    },
+    async signup({ commit }, { email, fullname, password, workspace }) {
       try {
         const response = await axios.post(`${getUrlBase()}/signup`, {
           email,
@@ -89,7 +107,9 @@ export default createStore({
           workspace
         });
 
-        const user = await loadState(response, commit);
+
+
+        const user = await loadState(response, this, commit);
 
         return user;
       } catch (error) {
@@ -104,7 +124,10 @@ export default createStore({
           password,
         });
 
-        const user = await loadState(response, commit);
+
+
+
+        const user = await loadState(response, this, commit);
         return user;
       } catch (error) {
         console.error('Login failed:', error);
@@ -144,6 +167,9 @@ export default createStore({
       commit('setWorkspace', '');
       commit('setChannels', []);
       commit('setMessages', {});
+
+      // Close the SSE connection
+      this.dispatch('closeSSE');
     },
     setActiveChannel({ commit }, channel) {
       commit('setActiveChannel', channel);
@@ -162,7 +188,7 @@ export default createStore({
             Authorization: `Bearer ${state.token}`,
           },
         });
-        commit('addMessage', { channelId: payload.chatId, message: response.data });
+       /*  commit('addMessage', { channelId: payload.chatId, message: response.data }); */
       } catch (error) {
         console.error('Failed to send message:', error);
         throw error;
@@ -176,6 +202,10 @@ export default createStore({
     },
     loadUserState({ commit }) {
       commit('loadUserState');
+      // if user is already logged in, establish a connection to the SSE server
+      if (this.state.token) {
+        this.dispatch('initSSE');
+      }
     },
   },
   getters: {
@@ -219,7 +249,7 @@ export default createStore({
   },
 });
 
-async function loadState(response, commit) {
+async function loadState(response, self, commit) {
   const token = response.data.token;
   const user = jwtDecode(token); // Decode the JWT to get user info
   const workspace = { id: user.wsId, name: user.wsName };
@@ -257,6 +287,9 @@ async function loadState(response, commit) {
     commit('setWorkspace', workspace);
     commit('setChannels', channels);
     commit('setUsers', usersMap);
+
+    // call initSSE to establish a connection to the SSE server
+    await self.dispatch('initSSE');
     return user;
   } catch (error) {
     console.error('Failed to load user state:', error);
